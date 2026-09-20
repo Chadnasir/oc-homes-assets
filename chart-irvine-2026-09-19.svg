@@ -1,1 +1,31 @@
-temp
+<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns='http://www.w3.org/2000/svg' width='860' height='420' viewBox='0 0 860 420' role='img' aria-label='OC HOMES Irvine market chart'>
+  <defs>
+    <linearGradient id='g' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%' stop-color='#1A5CFF' stop-opacity='0.25'/>
+      <stop offset='100%' stop-color='#1A5CFF' stop-opacity='0.02'/>
+    </linearGradient>
+  </defs>
+  <rect width='860' height='420' fill='#FFFFFF'/>
+  <rect x='0' y='0' width='860' height='56' fill='#0B2C5F'/>
+  <text x='28' y='36' fill='#FFFFFF' font-family='Arial, Helvetica, sans-serif' font-size='22' font-weight='700'>OC HOMES - Irvine Market Snapshot</text>
+  <text x='700' y='36' fill='#A8BDD6' font-family='Arial, Helvetica, sans-serif' font-size='14'>Sep 19, 2026</text>
+  <text x='28' y='92' fill='#0B2C5F' font-family='Arial, Helvetica, sans-serif' font-size='16' font-weight='700'>Median asking / sale trend (review chart)</text>
+  <rect x='60' y='120' width='740' height='220' fill='#F7FAFC' stroke='#D9E4F1'/>
+  <g stroke='#E2EBF5' stroke-width='1'>
+    <line x1='60' y1='175' x2='800' y2='175'/>
+    <line x1='60' y1='230' x2='800' y2='230'/>
+    <line x1='60' y1='285' x2='800' y2='285'/>
+  </g>
+  <polygon fill='url(#g)' points='80,300 180,280 280,265 380,240 480,235 580,215 680,200 780,185 780,340 80,340'/>
+  <polyline fill='none' stroke='#1A5CFF' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round' points='80,300 180,280 280,265 380,240 480,235 580,215 680,200 780,185'/>
+  <g fill='#1A5CFF'>
+    <circle cx='80' cy='300' r='4'/><circle cx='180' cy='280' r='4'/><circle cx='280' cy='265' r='4'/><circle cx='380' cy='240' r='4'/>
+    <circle cx='480' cy='235' r='4'/><circle cx='580' cy='215' r='4'/><circle cx='680' cy='200' r='4'/><circle cx='780' cy='185' r='4'/>
+  </g>
+  <text x='80' y='365' fill='#667' font-family='Arial, Helvetica, sans-serif' font-size='12'>Q1</text>
+  <text x='280' y='365' fill='#667' font-family='Arial, Helvetica, sans-serif' font-size='12'>Q2</text>
+  <text x='480' y='365' fill='#667' font-family='Arial, Helvetica, sans-serif' font-size='12'>Q3</text>
+  <text x='680' y='365' fill='#667' font-family='Arial, Helvetica, sans-serif' font-size='12'>Q4</text>
+  <text x='28' y='400' fill='#555' font-family='Arial, Helvetica, sans-serif' font-size='12'>Source: OC HOMES review packet - Cindy QA only - Not a formal CMA</text>
+</svg>
