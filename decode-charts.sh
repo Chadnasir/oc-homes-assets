@@ -1,24 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
-python3 - <<'PY'
-import base64, pathlib
+python3 << 'ENDPY'
+import base64, pathlib, re
 for stem in ["chart-irvine-2026-09-19", "chart-tustin-2026-09-19"]:
-    a = pathlib.Path(f"{stem}.b64.a.txt")
-    b = pathlib.Path(f"{stem}.b64.b.txt")
-    parts = sorted(pathlib.Path('.').glob(f"{stem}.b64.part*"))
-    if a.exists() and b.exists():
-        b64 = a.read_text().strip() + b.read_text().strip()
-        a.unlink(); b.unlink()
-    elif parts:
-        b64 = ''.join(p.read_text().strip() for p in parts)
-        for p in parts: p.unlink()
-    else:
-        p = pathlib.Path(f"{stem}.b64.txt")
-        b64 = p.read_text().strip(); p.unlink()
+    chunks = sorted(pathlib.Path('.').glob(f"{stem}.b64.c*"), key=lambda p: int(re.search(r'c(\d+)$', p.name).group(1)))
+    if not chunks:
+        raise SystemExit(f'missing chunks for {stem}')
+    b64 = ''.join(p.read_text().strip() for p in chunks)
+    for p in chunks:
+        p.unlink()
     out = pathlib.Path(f"{stem}.jpg")
     out.write_bytes(base64.b64decode(b64))
     print(out, out.stat().st_size)
-PY
+for p in pathlib.Path('.').glob('chart-*.b64.*'):
+    p.unlink(missing_ok=True)
+for name in ['decode-charts.sh','.upload-test.txt','.upload-test2.txt','.byte-test.bin','test-push.txt','test3.txt','test4.txt']:
+    pathlib.Path(name).unlink(missing_ok=True)
+ENDPY
 git config user.name "Chadnasir"
 git config user.email "sales@realestateca.org"
 git add -A
