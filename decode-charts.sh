@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 python3 << 'ENDPY'
-import base64, pathlib, re
+import base64, pathlib
 for stem in ["chart-irvine-2026-09-19", "chart-tustin-2026-09-19"]:
-    chunks = sorted(pathlib.Path('.').glob(f"{stem}.b64.c*"), key=lambda p: int(re.search(r'c(\d+)$', p.name).group(1)))
-    if not chunks:
-        raise SystemExit(f'missing chunks for {stem}')
-    b64 = ''.join(p.read_text().strip() for p in chunks)
-    for p in chunks:
-        p.unlink()
+    p = pathlib.Path(f"{stem}.b64.txt")
+    b64 = p.read_text().strip()
     out = pathlib.Path(f"{stem}.jpg")
     out.write_bytes(base64.b64decode(b64))
     print(out, out.stat().st_size)
-for p in pathlib.Path('.').glob('chart-*.b64.*'):
-    p.unlink(missing_ok=True)
-for name in ['decode-charts.sh','.upload-test.txt','.upload-test2.txt','.byte-test.bin','test-push.txt','test3.txt','test4.txt']:
-    pathlib.Path(name).unlink(missing_ok=True)
+    p.unlink()
+# cleanup helpers
+for pat in ['chart-*.b64.*', 'decode-charts.sh', '.upload-test*', '.byte-test.bin', 'test*.txt']:
+    for f in pathlib.Path('.').glob(pat):
+        if f.name.endswith('.svg') or f.name.endswith('.jpg') or f.name == 'README.md':
+            continue
+        f.unlink(missing_ok=True)
 ENDPY
 git config user.name "Chadnasir"
 git config user.email "sales@realestateca.org"
