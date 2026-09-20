@@ -1,55 +1,39 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# HQ chart sources staged on Netlify (860x420 JPEGs + matching b64.txt)
-NETLIFY_BASE="https://spark-line-0goa.netlify.app"
-
-fetch_hq() {
-  local f="$1"
-  # Prefer direct JPG (already HQ bytes)
-  if curl -fsSL -o "$f" "${NETLIFY_BASE}/${f}"; then
-    ls -la "$f"
-    return 0
-  fi
-  # Fallback: b64.txt from Netlify
-  if curl -fsSL -o "${f}.b64.txt" "${NETLIFY_BASE}/${f}.b64.txt"; then
-    base64 -d < "${f}.b64.txt" > "$f"
-    ls -la "$f"
-    return 0
-  fi
-  # Legacy local payloads
-  if [[ -f "${f}.b64.txt" ]]; then
-    base64 -d < "${f}.b64.txt" > "$f"
-  elif ls ${f}.b64.part* >/dev/null 2>&1; then
-    cat $(ls ${f}.b64.part* | sort) > "${f}.b64.txt"
-    base64 -d < "${f}.b64.txt" > "$f"
-  elif ls ${f}.zlib.hex.part* >/dev/null 2>&1 || [[ -f "${f}.zlib.hex.txt" ]]; then
-    if ls ${f}.zlib.hex.part* >/dev/null 2>&1; then
-      cat $(ls ${f}.zlib.hex.part* | sort) > "${f}.zlib.hex.txt"
-    fi
-    python3 - "$f" <<'PY'
-import sys, zlib
+decode_one() {
+  local stem="$1"
+  local jpg="${stem}.jpg"
+  local parts
+  mapfile -t parts < <(ls -1 "${stem}.jpg.zlib.b64.p"[0-9][0-9] 2>/dev/null | sort || true)
+  if ((${#parts[@]} > 0)); then
+    python3 - "$jpg" "${parts[@]}" <<'PY'
+import sys, base64, zlib
 from pathlib import Path
-f = sys.argv[1]
-hx = "".join(Path(f"{f}.zlib.hex.txt").read_text().split())
-Path(f).write_bytes(zlib.decompress(bytes.fromhex(hx)))
+out = Path(sys.argv[1])
+blob = "".join(Path(p).read_text().replace("\n","").replace(" ","") for p in sys.argv[2:])
+out.write_bytes(zlib.decompress(base64.b64decode(blob)))
 PY
+  elif [[ -f "${jpg}.b64.txt" ]]; then
+    base64 -d < "${jpg}.b64.txt" > "$jpg"
   else
-    cat $(ls ${f}.b64.w* | sort) > "${f}.b64.txt"
-    base64 -d < "${f}.b64.txt" > "$f"
+    echo "No payload for $jpg" >&2
+    exit 1
   fi
-  ls -la "$f"
+  base64 -w0 < "$jpg" > "${jpg}.b64.txt"
+  ls -la "$jpg"
 }
 
-for f in chart-irvine-2026-09-19.jpg chart-tustin-2026-09-19.jpg; do
-  fetch_hq "$f"
+for f in chart-irvine-2026-09-19 chart-tustin-2026-09-19; do
+  decode_one "$f"
 done
 
 git config user.name "Chadnasir"
 git config user.email "sales@realestateca.org"
-rm -f chart-*.jpg.b64.txt chart-*.jpg.b64.w* chart-*.jpg.b64.part* \
-      chart-*.jpg.zlib.hex.txt chart-*.jpg.zlib.hex.part*
+rm -f chart-*.jpg.b64.w* chart-*.jpg.b64.part* \
+      chart-*.jpg.zlib.hex.txt chart-*.jpg.zlib.hex.part* \
+      hq-upload-probe.txt hq-size-test.txt hq-probe-enc.jpg || true
 git add -A
 git status
-git commit -m "Replace OC HOMES charts with HQ 860x420 JPEGs"
+git commit -m "Replace OC HOMES charts with HQ 860x420 JPEGs" || true
 git push
