@@ -1,0 +1,114 @@
+name: Build OC HOMES 2026-09-21 assets
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: pip install pillow matplotlib requests
+      - name: Build images
+        run: |
+          python <<'PY'
+          import io, json, pathlib, requests
+          from PIL import Image
+          import matplotlib
+          matplotlib.use('Agg')
+          import matplotlib.pyplot as plt
+          import numpy as np
+
+          NAVY='#0B2C5F'; ORANGE='#FF6A00'; LIGHT='#E8EEF5'
+          OUT=pathlib.Path('.')
+
+          homes=[
+            ("home-00-2026-09-21.jpg","https://m.cbhomes.com/p/733/NP26205070/6EF353964e1F462/original.webp"),
+            ("home-01-2026-09-21.jpg","https://m.cbhomes.com/p/733/OC26203325/f9feFfb80e544c0/original.webp"),
+            ("home-02-2026-09-21.jpg","https://m.cbhomes.com/p/733/OC26196704/f7b804E37d4E476/original.webp"),
+            ("home-03-2026-09-21.jpg","https://m.cbhomes.com/p/733/WS26195554/D1575814Dcf54Fd/original.webp"),
+            ("home-04-2026-09-21.jpg","https://m.cbhomes.com/p/733/PW26205502/17217bB20D98474/original.webp"),
+            ("home-05-2026-09-21.jpg","https://photos.zillowstatic.com/fp/de670d5cbf5dd6a2caddac34a949ef3f-cc_ft_1536.jpg"),
+            ("home-06-2026-09-21.jpg","https://m.cbhomes.com/p/733/OC26204698/a83bd2dfe7174EA/original.webp"),
+            ("home-07-2026-09-21.jpg","https://m.cbhomes.com/p/733/OC26195326/897855bE1987431/original.webp"),
+          ]
+          banner_url="https://cindy-su-wetrust.netlify.app/banner-2026-09-19.jpg"
+
+          def cover(im, tw=860, th=480):
+              im=im.convert('RGB'); w,h=im.size
+              s=max(tw/w, th/h); nw,nh=int(round(w*s)),int(round(h*s))
+              im=im.resize((nw,nh), Image.Resampling.LANCZOS)
+              l=(nw-tw)//2; t=(nh-th)//2
+              return im.crop((l,t,l+tw,t+th))
+
+          sess=requests.Session(); sess.headers['User-Agent']='Mozilla/5.0 OC-HOMES-Assets/1.0'
+          for name,url in homes:
+              r=sess.get(url,timeout=60); r.raise_for_status()
+              im=Image.open(io.BytesIO(r.content))
+              cover(im).save(OUT/name,'JPEG',quality=88,optimize=True)
+              print('wrote', name, (OUT/name).stat().st_size)
+
+          r=sess.get(banner_url,timeout=60); r.raise_for_status()
+          bim=Image.open(io.BytesIO(r.content)).convert('RGB')
+          if bim.size!=(860,480): bim=cover(bim)
+          bim.save(OUT/'banner-2026-09-21.jpg','JPEG',quality=90,optimize=True)
+          print('banner', (OUT/'banner-2026-09-21.jpg').stat().st_size)
+
+          def snapshot(city, metrics, color, path, footer):
+              fig=plt.figure(figsize=(8.60,4.20), dpi=100, facecolor='white')
+              fig.subplots_adjust(left=0.06,right=0.98,top=0.82,bottom=0.22,wspace=0.35)
+              fig.text(0.06,0.92,f'{city}, CA market snapshot',fontsize=16,fontweight='bold',color=NAVY,ha='left',va='top')
+              axes=[fig.add_subplot(1,3,i+1) for i in range(3)]
+              ax=axes[0]; v=metrics['price']; ymax=metrics['py']
+              ax.bar([0],[v],width=0.55,color=color,zorder=3); ax.set_ylim(0,ymax); ax.set_xlim(-0.7,0.7)
+              ax.set_xticks([0]); ax.set_xticklabels(['Median sale price'],fontsize=10,color=NAVY)
+              yt=np.linspace(0,ymax,8); ax.set_yticks(yt); ax.set_yticklabels([f'${y/1e6:.2f}M' for y in yt],fontsize=8,color='#667788')
+              ax.yaxis.grid(True,color=LIGHT,linewidth=0.8,zorder=0); ax.set_axisbelow(True)
+              for s in ax.spines.values(): s.set_visible(False)
+              ax.tick_params(length=0)
+              ax.text(0,v+ymax*0.03,metrics['pl'],ha='center',va='bottom',fontsize=11,fontweight='bold',color=NAVY)
+              ax=axes[1]; v=metrics['dom']; ymax=metrics['dy']
+              ax.bar([0],[v],width=0.55,color=color,zorder=3); ax.set_ylim(0,ymax); ax.set_xlim(-0.7,0.7)
+              ax.set_xticks([0]); ax.set_xticklabels(['Median DOM (days)'],fontsize=10,color=NAVY)
+              yt=np.linspace(0,ymax,8); ax.set_yticks(yt); ax.set_yticklabels([f'{int(y)}' for y in yt],fontsize=8,color='#667788')
+              ax.yaxis.grid(True,color=LIGHT,linewidth=0.8,zorder=0); ax.set_axisbelow(True)
+              for s in ax.spines.values(): s.set_visible(False)
+              ax.tick_params(length=0)
+              ax.text(0,v+ymax*0.03,f'{v} days',ha='center',va='bottom',fontsize=11,fontweight='bold',color=NAVY)
+              ax=axes[2]; v=metrics['t']; ymax=metrics['ty']
+              ax.bar([0],[v],width=0.55,color=color,zorder=3); ax.set_ylim(0,ymax); ax.set_xlim(-0.7,0.7)
+              ax.set_xticks([0]); ax.set_xticklabels([metrics['tx']],fontsize=10,color=NAVY)
+              if metrics.get('tint'):
+                yt=np.linspace(0,ymax,7); ax.set_yticks(yt); ax.set_yticklabels([f'{int(y)}' for y in yt],fontsize=8,color='#667788')
+              else:
+                yt=np.linspace(0,ymax,int(ymax)+1 if ymax<=8 else 7); ax.set_yticks(yt); ax.set_yticklabels([f'{y:g}' for y in yt],fontsize=8,color='#667788')
+              ax.yaxis.grid(True,color=LIGHT,linewidth=0.8,zorder=0); ax.set_axisbelow(True)
+              for s in ax.spines.values(): s.set_visible(False)
+              ax.tick_params(length=0)
+              ax.text(0,v+ymax*0.03,metrics['tl'],ha='center',va='bottom',fontsize=11,fontweight='bold',color=NAVY)
+              if metrics.get('bl') is not None: ax.axhline(metrics['bl'],color='white',linestyle='--',linewidth=1.2,zorder=4)
+              fig.text(0.06,0.04,footer,fontsize=7.2,color='#777',ha='left',va='bottom')
+              tmp=path.with_suffix('.tmp.png'); fig.savefig(tmp,dpi=100,facecolor='white'); plt.close(fig)
+              im=Image.open(tmp).convert('RGB'); tw,th=860,420; w,h=im.size; s=min(tw/w,th/h); nw,nh=int(round(w*s)),int(round(h*s))
+              im2=im.resize((nw,nh),Image.Resampling.LANCZOS); canvas=Image.new('RGB',(tw,th),(255,255,255)); canvas.paste(im2,((tw-nw)//2,(th-nh)//2))
+              canvas.save(path,'JPEG',quality=92,optimize=True); tmp.unlink(missing_ok=True); print(path.name, path.stat().st_size)
+
+          snapshot('Irvine',{'price':1528995,'pl':'$1,528,995','py':1.75e6,'dom':28,'dy':35,'t':4.6,'tl':'4.6 mo','tx':'Months of supply','ty':6,'bl':4},
+                   NAVY, OUT/'chart-irvine-2026-09-21.jpg',
+                   'Irvine only. Median sale $1,528,995 & DOM 28 days = trailing ~12 months CRMLS closings through ~Aug 21, 2026 (homesforsaleinirvine.com / Sagorin). Months of supply ~4.6 (810 actives as of Aug 24). exp x COMMERCIAL · OC HOMES')
+          snapshot('Tustin',{'price':1195000,'pl':'$1,195,000','py':1.40e6,'dom':11,'dy':25,'t':111,'tl':'111','tx':'Active listings','ty':150,'tint':True,'bl':None},
+                   ORANGE, OUT/'chart-tustin-2026-09-21.jpg',
+                   'Tustin only. Median sale $1,195,000 & DOM 11 days = June 2026 closings (CRMLS via The Network Agency). ~111 actives at that report (no clean citywide months-of-supply this pull). exp x COMMERCIAL · OC HOMES')
+          print('DONE')
+          PY
+      - name: Commit assets
+        run: |
+          git config user.name "Chadnasir"
+          git config user.email "sales@realestateca.org"
+          git add -A banner-2026-09-21.jpg home-*-2026-09-21.jpg chart-*-2026-09-21.jpg
+          git status
+          git commit -m "OC HOMES 2026-09-21: banner, 8 homes, Irvine/Tustin pro charts" || echo "nothing to commit"
+          git push
