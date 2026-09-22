@@ -1,0 +1,23 @@
+name: Decode eXp Commercial logo
+on:
+  push:
+    paths:
+      - soc-decode/exp-commercial-logo.jpg.b64
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode and commit
+        run: |
+          set -euo pipefail
+          base64 -d soc-decode/exp-commercial-logo.jpg.b64 > exp-commercial-logo.jpg
+          ls -la exp-commercial-logo.jpg
+          git config user.name Chadnasir
+          git config user.email sales@realestateca.org
+          git add exp-commercial-logo.jpg
+          git commit -m "Add eXp Commercial logo JPEG for SOC digest" || echo nothing
+          git push
