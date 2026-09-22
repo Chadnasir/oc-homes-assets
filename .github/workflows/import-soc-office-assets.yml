@@ -1,0 +1,26 @@
+name: Import SOC office assets
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch SOC office assets
+        run: |
+          set -euo pipefail
+          base="https://spark-line-0goa.netlify.app"
+          for f in oc-vacancy-q2-2026.jpg oc-asking-rent-q2-2026.jpg cp115-interior.jpg cp245-interior.jpg cp230-interior.jpg exp-commercial-logo.png; do
+            curl -fL --retry 3 --retry-all-errors -o "$f" "$base/$f"
+            test -s "$f"
+          done
+      - name: Commit assets
+        run: |
+          set -euo pipefail
+          git config user.name "Chadnasir"
+          git config user.email "sales@realestateca.org"
+          git add oc-vacancy-q2-2026.jpg oc-asking-rent-q2-2026.jpg cp115-interior.jpg cp245-interior.jpg cp230-interior.jpg exp-commercial-logo.png
+          git commit -m "Add SOC office email assets"
+          git push
