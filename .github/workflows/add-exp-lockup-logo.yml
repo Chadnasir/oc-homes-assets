@@ -1,0 +1,38 @@
+name: Add eXp Commercial lockup logo
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+      - name: Generate lockup and commit
+        run: |
+          python <<'PY'
+          from PIL import Image, ImageDraw, ImageFont
+          from pathlib import Path
+          W,H = 480, 120
+          im = Image.new("RGB", (W,H), (11,44,95))
+          d = ImageDraw.Draw(im)
+          try:
+              font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36)
+          except Exception:
+              font = ImageFont.load_default()
+          d.text((24, 28), "exp", fill=(255,255,255), font=font)
+          bbox = d.textbbox((24,28), "exp", font=font)
+          d.text((bbox[2]+8, 28), "x", fill=(255,106,0), font=font)
+          bbox2 = d.textbbox((bbox[2]+8, 28), "x", font=font)
+          d.text((bbox2[2]+8, 28), "COMMERCIAL", fill=(255,255,255), font=font)
+          im.save("exp-commercial-logo.jpg", "JPEG", quality=90, optimize=True)
+          print("wrote", Path("exp-commercial-logo.jpg").stat().st_size)
+          PY
+          git config user.name Chadnasir
+          git config user.email sales@realestateca.org
+          git add exp-commercial-logo.jpg
+          git commit -m "Add eXp Commercial lockup logo for SOC digest" || echo nothing
+          git push
