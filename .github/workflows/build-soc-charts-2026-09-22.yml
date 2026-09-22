@@ -1,0 +1,93 @@
+name: Build SOC office charts 2026-09-22
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install pillow matplotlib
+      - name: Build SOC charts
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import matplotlib
+          matplotlib.use("Agg")
+          import matplotlib.pyplot as plt
+          from PIL import Image
+
+          NAVY = "#0B2C5F"
+          ORANGE = "#FF6A00"
+          SLATE = "#6B7C93"
+          LIGHT = "#E5E9F0"
+          OUT = Path(".")
+
+          def save_chart(fig, path, tw=860, th=420):
+              tmp = path.with_suffix(".tmp.png")
+              fig.savefig(tmp, dpi=100, facecolor="white")
+              plt.close(fig)
+              im = Image.open(tmp).convert("RGB")
+              w, h = im.size
+              s = min(tw / w, th / h)
+              nw, nh = int(round(w * s)), int(round(h * s))
+              im2 = im.resize((nw, nh), Image.Resampling.LANCZOS)
+              canvas = Image.new("RGB", (tw, th), (255, 255, 255))
+              canvas.paste(im2, ((tw - nw) // 2, (th - nh) // 2))
+              canvas.save(path, "JPEG", quality=92, optimize=True)
+              tmp.unlink(missing_ok=True)
+              print(path.name, path.stat().st_size)
+
+          fig, ax = plt.subplots(figsize=(8.6, 4.2), dpi=100, facecolor="white")
+          labels = ["Kidder\nQ2'26", "CBRE\nQ2'26", "Cushman\n/ LAT"]
+          vals = [10.9, 13.3, 14.4]
+          colors = [NAVY, ORANGE, SLATE]
+          bars = ax.bar(labels, vals, color=colors, width=0.55, zorder=3)
+          ax.set_ylim(0, 18)
+          ax.set_ylabel("Direct / reported vacancy %", color="#888", fontsize=11)
+          ax.set_title("OC Office Vacancy — Q2 2026 (by source)", color=NAVY, fontsize=16, fontweight="bold", pad=12)
+          ax.yaxis.grid(True, linestyle="--", color=LIGHT, zorder=0)
+          ax.set_axisbelow(True)
+          for s in ax.spines.values():
+              s.set_visible(False)
+          ax.tick_params(length=0, colors="#555")
+          for b, v in zip(bars, vals):
+              ax.text(b.get_x() + b.get_width() / 2, v + 0.4, f"{v}%", ha="center", va="bottom", fontsize=14, fontweight="bold", color=NAVY)
+          fig.text(0.5, 0.02, "Methods differ: Kidder direct vacancy; CBRE/Cushman broader. Near multi-year lows.", ha="center", fontsize=9, style="italic", color="#888")
+          fig.tight_layout(rect=[0, 0.06, 1, 1])
+          save_chart(fig, OUT / "chart-oc-vacancy-q2-2026.jpg")
+
+          fig, ax = plt.subplots(figsize=(8.6, 4.2), dpi=100, facecolor="white")
+          labels = ["Kidder\nFS ask", "CBRE\nFSG ask", "Cushman\nask"]
+          vals = [2.94, 2.89, 2.86]
+          bars = ax.bar(labels, vals, color=colors, width=0.55, zorder=3)
+          ax.set_ylim(0, 3.5)
+          ax.set_ylabel("Asking rent $/SF/MO", color="#888", fontsize=11)
+          ax.set_title("OC Office Asking Rent — Q2 2026 (by source)", color=NAVY, fontsize=16, fontweight="bold", pad=12)
+          ax.yaxis.grid(True, linestyle="--", color=LIGHT, zorder=0)
+          ax.set_axisbelow(True)
+          for s in ax.spines.values():
+              s.set_visible(False)
+          ax.tick_params(length=0, colors="#555")
+          for b, v in zip(bars, vals):
+              ax.text(b.get_x() + b.get_width() / 2, v + 0.08, f"${v:.2f}", ha="center", va="bottom", fontsize=14, fontweight="bold", color=NAVY)
+          ax.annotate("+4.3% YoY (Kidder)", xy=(0, 2.94), xytext=(1.6, 3.25),
+                      fontsize=12, fontweight="bold", color=ORANGE,
+                      arrowprops=dict(arrowstyle="->", color=ORANGE))
+          fig.text(0.5, 0.02, "Full-service / FSG asking. NNN base rents in this digest exclude CAM — all-in may exceed $4k.", ha="center", fontsize=9, style="italic", color="#888")
+          fig.tight_layout(rect=[0, 0.06, 1, 1])
+          save_chart(fig, OUT / "chart-oc-asking-rent-q2-2026.jpg")
+          print("DONE")
+          PY
+      - name: Commit charts
+        run: |
+          git config user.name "Chadnasir"
+          git config user.email "sales@realestateca.org"
+          git add chart-oc-vacancy-q2-2026.jpg chart-oc-asking-rent-q2-2026.jpg
+          git status
+          git commit -m "SOC office Q2-2026 vacancy + asking rent charts" || echo nothing to commit
+          git push
